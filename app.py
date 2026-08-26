@@ -4,6 +4,7 @@ Streamlit version, for free deployment on Streamlit Community Cloud.
 Educational/research use only — NOT a diagnostic tool.
 """
 
+import os
 import numpy as np
 import cv2
 import tensorflow as tf
@@ -14,7 +15,7 @@ from huggingface_hub import hf_hub_download
 # ---------------------------------------------------------------------------
 # CONFIG — update HF_MODEL_REPO to your own model repo path
 # ---------------------------------------------------------------------------
-HF_MODEL_REPO = "meli143/vgg16-mammogram-clahe"   
+HF_MODEL_REPO = "meli143/vgg16-mammogram-clahe"  
 HF_MODEL_FILE = "vgg16_clahe_final.keras"
 THRESHOLD = 0.5712
 IMG_SIZE = 224
@@ -119,10 +120,34 @@ st.warning(
     "It is **not a diagnostic tool** and must not be used for real medical decisions."
 )
 
-uploaded_file = st.file_uploader("Upload a mammogram image (JPEG/PNG)", type=["jpg", "jpeg", "png"])
+if "active_image" not in st.session_state:
+    st.session_state.active_image = None
 
+SAMPLE_DIR = "samples"
+sample_files = sorted(os.listdir(SAMPLE_DIR)) if os.path.isdir(SAMPLE_DIR) else []
+
+st.markdown("### Try a sample image")
+if sample_files:
+    cols = st.columns(len(sample_files))
+    for col, fname in zip(cols, sample_files):
+        path = os.path.join(SAMPLE_DIR, fname)
+        label = fname.replace("_", " ").rsplit(".", 1)[0].title()
+        with col:
+            st.image(path, caption=label, use_container_width=True)
+            if st.button(f"Use {label}", key=fname):
+                st.session_state.active_image = Image.open(path)
+else:
+    st.caption("No sample images found — add a `samples/` folder with a few JPEG/PNG files to enable this.")
+
+st.markdown("### Or upload your own")
+uploaded_file = st.file_uploader("Upload a mammogram image (JPEG/PNG)", type=["jpg", "jpeg", "png"])
 if uploaded_file is not None:
-    pil_img = Image.open(uploaded_file)
+    st.session_state.active_image = Image.open(uploaded_file)
+    st.caption("Using your uploaded image. Remove it (❌ on the uploader) before picking a different sample.")
+
+pil_img = st.session_state.active_image
+
+if pil_img is not None:
     img_scaled = preprocess_for_model(pil_img)
     arr = np.expand_dims(img_scaled, 0).astype(np.float32)
 
@@ -144,3 +169,5 @@ if uploaded_file is not None:
         "Grad-CAM highlights the region the model weighted most heavily. "
         "Note: VGG16's final feature map is only 7×7, so localisation is coarse, not pixel-precise."
     )
+else:
+    st.info("Pick a sample image above, or upload your own, to get a prediction.")
