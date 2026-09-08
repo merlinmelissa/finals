@@ -43,7 +43,7 @@ SAMPLES = {
         "ground_truth": "Benign"
     },
     "Sample 3": {
-        "path": "samples/benign_8.jpg",
+        "path": "samples/benign_7.jpg",
         "ground_truth": "Benign"
     },
     "Sample 4": {
@@ -55,7 +55,7 @@ SAMPLES = {
         "ground_truth": "Benign"
     },
     "Sample 6": {
-        "path": "samples/benign_10.jpg",
+        "path": "samples/benign_6.jpg",
         "ground_truth": "Benign"
     },
     "Sample 7": {
