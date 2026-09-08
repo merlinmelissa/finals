@@ -67,7 +67,7 @@ SAMPLES = {
         "ground_truth": "Malignant"
     },
     "Sample 9": {
-        "path": "samples/malignant_3.jpg",
+        "path": "samples/malignant_14.jpg",
         "ground_truth": "Malignant"
     },
     "Sample 10": {
@@ -87,7 +87,7 @@ SAMPLES = {
         "ground_truth": "Malignant"
     },
     "Sample 14": {
-        "path": "samples/malignant_9.jpg",
+        "path": "samples/malignant_15.jpg",
         "ground_truth": "Malignant"
     },
     "Sample 15": {
