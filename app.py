@@ -81,7 +81,7 @@ SAMPLES = {
     "Sample 11": {
         "path": "samples/malignant_9.jpg",
         "ground_truth": "Malignant"
-    },
+    }
 
 }
 
