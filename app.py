@@ -87,11 +87,11 @@ SAMPLES = {
         "ground_truth": "Malignant"
     },
     "Sample 14": {
-        "path": "samples/malignant_20.jpg",
+        "path": "samples/malignant_3.jpg",
         "ground_truth": "Malignant"
     },
     "Sample 15": {
-        "path": "samples/malignant_10.jpg",
+        "path": "samples/malignant_4.jpg",
         "ground_truth": "Malignant"
     }
 }
