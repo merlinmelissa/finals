@@ -57,7 +57,7 @@ SAMPLES = {
     "Sample 6": {
         "path": "samples/malignant_3.jpg",
         "ground_truth": "Malignant"
-    }
+    },
     "Sample 7": {
         "path": "samples/malignant_4.jpg",
         "ground_truth": "Malignant"
