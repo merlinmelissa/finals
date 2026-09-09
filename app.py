@@ -93,6 +93,22 @@ SAMPLES = {
     "Sample 15": {
         "path": "samples/malignant_30.jpg",
         "ground_truth": "Malignant"
+    },
+    "Sample 16": {
+        "path": "samples/benign_7.jpg",
+        "ground_truth": "Benign"
+    },
+    "Sample 17": {
+        "path": "samples/benign_8.jpg",
+        "ground_truth": "Benign"
+    },
+    "Sample 18": {
+        "path": "samples/benign_9.jpg",
+        "ground_truth": "Benign"
+    },
+    "Sample 19": {
+        "path": "samples/benign_10.jpg",
+        "ground_truth": "Benign"
     }
 }
 
