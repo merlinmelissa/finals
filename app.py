@@ -42,36 +42,12 @@ SAMPLES = {
         "path": "samples/benign_2.jpg",
         "ground_truth": "Benign"
     },
-    "Sample 3": {
-        "path": "samples/benign_3.jpg",
-        "ground_truth": "Benign"
-    },
     "Sample 4": {
         "path": "samples/benign_4.jpg",
         "ground_truth": "Benign"
     },
-    "Sample 5": {
-        "path": "samples/malignant_13.jpg",
-        "ground_truth": "Malignant"
-    },
-    "Sample 6": {
-        "path": "samples/malignant_21.jpg",
-        "ground_truth": "Malignant"
-    },
-    "Sample 7": {
-        "path": "samples/malignant_31.jpg",
-        "ground_truth": "Malignant"
-    },
-    "Sample 8": {
-        "path": "samples/malignant_32.jpg",
-        "ground_truth": "Malignant"
-    },
     "Sample 9": {
         "path": "samples/malignant_24.jpg",
-        "ground_truth": "Malignant"
-    },
-    "Sample 10": {
-        "path": "samples/malignant_25.jpg",
         "ground_truth": "Malignant"
     },
     "Sample 11": {
@@ -82,10 +58,6 @@ SAMPLES = {
         "path": "samples/malignant_27.jpg",
         "ground_truth": "Malignant"
     },
-    "Sample 13": {
-        "path": "samples/malignant_34.jpg",
-        "ground_truth": "Malignant"
-    },
     "Sample 14": {
         "path": "samples/malignant_35.jpg",
         "ground_truth": "Malignant"
@@ -93,14 +65,6 @@ SAMPLES = {
     "Sample 15": {
         "path": "samples/malignant_30.jpg",
         "ground_truth": "Malignant"
-    },
-    "Sample 16": {
-        "path": "samples/benign_7.jpg",
-        "ground_truth": "Benign"
-    },
-    "Sample 17": {
-        "path": "samples/benign_8.jpg",
-        "ground_truth": "Benign"
     },
     "Sample 18": {
         "path": "samples/benign_13.jpg",
