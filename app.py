@@ -50,8 +50,8 @@ SAMPLES = {
         "path": "samples/malignant_24.jpg",
         "ground_truth": "Malignant"
     },
-    "Sample 11": {
-        "path": "samples/malignant_33.jpg",
+    "Sample 10": {
+        "path": "samples/malignant_25.jpg",
         "ground_truth": "Malignant"
     },
     "Sample 12": {
