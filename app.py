@@ -1,76 +1,99 @@
 """
-Mammogram classifier - ResNet50 + CLAHE
-FYP research prototype, not for real diagnosis.
+Breast Cancer Mammogram Classifier — ResNet50 + CLAHE
+
+Final Year Project research prototype.
+Educational/research use only — NOT a diagnostic tool.
 """
 
+import os
 import streamlit as st
 import numpy as np
 import cv2
 import tensorflow as tf
+
 from PIL import Image
 from huggingface_hub import hf_hub_download
 
+# ---------------- config ----------------
+
 HF_REPO_ID = "meli143/resnet50-mammogram-clahe"
 HF_FILENAME = "resnet50_clahe_final.keras"
-IMG_SIZE = 224
-THRESHOLD = 0.4721  # from find_best_threshold() on the val set, main run
-TEST_AUC = 0.7447
-MULTISEED_AUC = "0.7534 ± 0.0050"  # 3-seed robustness check, not a sig test
 
+IMG_SIZE = 224
+THRESHOLD = 0.4721
+
+TEST_AUC = 0.7447
+MULTISEED_AUC = "0.7534 ± 0.0050"
+
+# demo images shown in the "sample image" picker, with their known labels
 SAMPLES = {
-    "Sample 1":  ("samples/benign_1.jpg",    "Benign"),
-    "Sample 2":  ("samples/benign_2.jpg",    "Benign"),
-    "Sample 3":  ("samples/benign_3.jpg",    "Benign"),
-    "Sample 4":  ("samples/benign_4.jpg",    "Benign"),
-    "Sample 5":  ("samples/benign_5.jpg",    "Benign"),
-    "Sample 6":  ("samples/malignant_1.jpg", "Malignant"),
-    "Sample 7":  ("samples/malignant_2.jpg", "Malignant"),
-    "Sample 8":  ("samples/malignant_3.jpg", "Malignant"),
-    "Sample 9":  ("samples/malignant_4.jpg", "Malignant"),
-    "Sample 10": ("samples/malignant_5.jpg", "Malignant"),
+    "Sample 1": {"path": "samples/benign_1.jpg", "ground_truth": "Benign"},
+    "Sample 2": {"path": "samples/benign_2.jpg", "ground_truth": "Benign"},
+    "Sample 3": {"path": "samples/benign_3.jpg", "ground_truth": "Benign"},
+    "Sample 4": {"path": "samples/benign_4.jpg", "ground_truth": "Benign"},
+    "Sample 5": {"path": "samples/benign_5.jpg", "ground_truth": "Benign"},
+    "Sample 6": {"path": "samples/malignant_1.jpg", "ground_truth": "Malignant"},
+    "Sample 7": {"path": "samples/malignant_2.jpg", "ground_truth": "Malignant"},
+    "Sample 8": {"path": "samples/malignant_3.jpg", "ground_truth": "Malignant"},
+    "Sample 9": {"path": "samples/malignant_4.jpg", "ground_truth": "Malignant"},
+    "Sample 10": {"path": "samples/malignant_5.jpg", "ground_truth": "Malignant"},
 }
 
-st.set_page_config(page_title="Mammography Screening Assistant", layout="wide")
+st.set_page_config(page_title="Mammography Screening Assistant", page_icon="🩺", layout="wide")
 
+
+# ---------------- model loading ----------------
 
 @st.cache_resource
 def load_model():
-    path = hf_hub_download(repo_id=HF_REPO_ID, filename=HF_FILENAME)
-    return tf.keras.models.load_model(path)
+    # pull the .keras file from the HF hub once, then cache it for the session
+    model_path = hf_hub_download(repo_id=HF_REPO_ID, filename=HF_FILENAME)
+    return tf.keras.models.load_model(model_path)
 
 
-def crop_to_content(img, threshold=10):
-    # trims the black margin most mammogram scans have around the tissue
-    gray = cv2.cvtColor(img, cv2.COLOR_RGB2GRAY)
+# ---------------- preprocessing ----------------
+
+def crop_to_content(image_np, threshold=10):
+    """Trim the black margins around the breast tissue before resizing."""
+    gray = cv2.cvtColor(image_np, cv2.COLOR_RGB2GRAY)
     mask = gray > threshold
+
     rows, cols = np.any(mask, axis=1), np.any(mask, axis=0)
     if not rows.any() or not cols.any():
-        return img
+        return image_np  # fully black image, nothing to crop
+
     rmin, rmax = np.where(rows)[0][[0, -1]]
     cmin, cmax = np.where(cols)[0][[0, -1]]
-    return img[rmin:rmax + 1, cmin:cmax + 1]
+    return image_np[rmin:rmax + 1, cmin:cmax + 1]
 
 
-def apply_clahe(img):
-    gray = cv2.cvtColor(img, cv2.COLOR_RGB2GRAY)
+def apply_clahe(image_uint8):
+    """Contrast-enhance the mammogram (same CLAHE settings as the training notebook)."""
+    gray = cv2.cvtColor(image_uint8, cv2.COLOR_RGB2GRAY)
     clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8, 8))
-    return cv2.cvtColor(clahe.apply(gray), cv2.COLOR_GRAY2RGB)
+    enhanced = clahe.apply(gray)
+    return cv2.cvtColor(enhanced, cv2.COLOR_GRAY2RGB)
 
 
 def preprocess_image(pil_image):
-    # crop -> clahe -> resize -> resnet preprocessing, same order as the notebook
+    """Full pipeline: crop -> CLAHE -> resize/pad -> ResNet50 preprocessing."""
     img = np.array(pil_image.convert("RGB")).astype(np.uint8)
-    cropped = crop_to_content(img)
-    clahe_img = apply_clahe(cropped)
+    img = crop_to_content(img)
+    img = apply_clahe(img)
 
-    resized = tf.image.resize_with_pad(tf.cast(clahe_img, tf.float32), IMG_SIZE, IMG_SIZE)
-    display_img = resized.numpy() / 255.0          # for showing on screen + gradcam overlay
-    model_input = tf.keras.applications.resnet50.preprocess_input(resized)
+    resized = tf.image.resize_with_pad(tf.cast(img, tf.float32), IMG_SIZE, IMG_SIZE)
 
-    return np.expand_dims(model_input.numpy(), axis=0), display_img
+    display_img = resized.numpy() / 255.0  # only used for showing the image, not fed to the model
+    model_img = tf.keras.applications.resnet50.preprocess_input(resized)
+    arr = np.expand_dims(model_img.numpy(), axis=0)
 
+    return arr, display_img
+
+
+# ---------------- grad-cam ----------------
 
 def make_gradcam(arr, model, threshold):
+    """Build a class-activation heatmap for whichever class the model actually predicted."""
     layer = model.get_layer("conv4_block6_out")
     grad_model = tf.keras.Model(model.input, [layer.output, model.output])
 
@@ -82,34 +105,44 @@ def make_gradcam(arr, model, threshold):
     weights = tf.reduce_mean(grads, axis=(1, 2))
     heatmap = tf.reduce_sum(conv[0] * weights[0], axis=-1)
     heatmap = tf.maximum(heatmap, 0)
-    heatmap /= tf.reduce_max(heatmap) + 1e-8
+    heatmap /= (tf.reduce_max(heatmap) + 1e-8)
 
     return cv2.resize(heatmap.numpy(), (IMG_SIZE, IMG_SIZE), interpolation=cv2.INTER_CUBIC)
 
 
-def colourise(heatmap):
-    heatmap_uint8 = np.uint8(255 * np.clip(heatmap, 0, 1))
-    coloured = cv2.applyColorMap(heatmap_uint8, cv2.COLORMAP_JET)
-    coloured = cv2.cvtColor(coloured, cv2.COLOR_BGR2RGB)
-    return coloured.astype(np.float32) / 255.0
-
-
 def make_overlay(display_img, heatmap):
-    # zero out anything outside the breast tissue so the heatmap doesn't glow on background
+    """Blend the heatmap over the image, masked to stay roughly within the breast tissue."""
     mask = (np.mean(display_img, axis=-1) > 0.03).astype(float)
     heatmap = heatmap * mask
     if heatmap.max() > 0:
         heatmap = heatmap / heatmap.max()
-    coloured = colourise(heatmap)
+
+    heatmap_uint8 = np.uint8(255 * np.clip(heatmap, 0, 1))
+    coloured = cv2.applyColorMap(heatmap_uint8, cv2.COLORMAP_JET)
+    coloured = cv2.cvtColor(coloured, cv2.COLOR_BGR2RGB).astype(np.float32) / 255.0
+
     return np.clip(display_img * 0.65 + coloured * 0.35, 0, 1)
 
 
+def run_prediction(pil_image, model):
+    arr, display_img = preprocess_image(pil_image)
+    prob = float(model.predict(arr, verbose=0)[0][0])
+    label = "Malignant" if prob >= THRESHOLD else "Benign"
+
+    heatmap = make_gradcam(arr, model, THRESHOLD)
+    overlay = make_overlay(display_img, heatmap)
+
+    return label, prob, display_img, overlay
+
+
+# ---------------- header ----------------
+
 st.title("Deep Learning Mammography Screening Assistant")
-st.caption("Final Year Project - CBIS-DDSM mass classification using ResNet50 + CLAHE")
+st.caption("Final Year Project — CBIS-DDSM mass classification using ResNet50 + CLAHE")
 st.warning(
-    "This application is a university research prototype. It has not been "
-    "clinically validated and must not be used for real medical diagnosis "
-    "or treatment decisions."
+    "This application is a university research prototype. "
+    "It has not been clinically validated and must not be used "
+    "for real medical diagnosis or treatment decisions."
 )
 
 with st.expander("About this model"):
@@ -117,66 +150,98 @@ with st.expander("About this model"):
     st.write("**Task:** Binary classification of mammograms as benign or malignant")
     st.write(f"**Main test-set AUC:** {TEST_AUC:.4f}")
     st.write(
-        "**Main test-set performance:** Accuracy 0.6190 | Sensitivity 0.8503 | "
-        "Specificity 0.4719 | Precision 0.5061"
+        "**Main test-set performance:** "
+        "Accuracy 0.6190 | Sensitivity 0.8503 | Specificity 0.4719 | Precision 0.5061"
     )
     st.write(f"**3-seed mean AUC:** {MULTISEED_AUC}")
-    st.caption("The three-seed run is a robustness check, not a formal significance test.")
+    st.caption("The three-seed analysis is reported as a robustness check rather than a formal statistical significance test.")
 
 with st.spinner("Loading ResNet50 + CLAHE model..."):
     model = load_model()
 
-# ---- pick an image first, run the model only after "Analyse" is pressed ----
-source = st.radio("Image source", ["Upload your own", "Try a sample"], horizontal=True)
+st.success("Model loaded successfully.")
 
-pil_img = None
-ground_truth = None
 
-if source == "Upload your own":
+# ---------------- image selection ----------------
+
+st.subheader("Choose an image")
+input_method = st.radio(
+    "Select how you would like to test the model:",
+    ["Use a sample image", "Upload your own image"],
+    horizontal=True,
+)
+
+selected_image = ground_truth = selected_name = None
+
+if input_method == "Use a sample image":
+    st.write("Choose one of the six demonstration mammograms.")
+    sample_name = st.selectbox("Select sample", list(SAMPLES.keys()))
+    sample_info = SAMPLES[sample_name]
+
+    if os.path.exists(sample_info["path"]):
+        selected_image = Image.open(sample_info["path"])
+        ground_truth = sample_info["ground_truth"]
+        selected_name = sample_name
+    else:
+        st.error(f"Sample file not found: {sample_info['path']}")
+
+else:
     uploaded_file = st.file_uploader("Upload a mammogram image", type=["jpg", "jpeg", "png"])
     if uploaded_file is not None:
-        pil_img = Image.open(uploaded_file)
-else:
-    choice = st.selectbox("Pick a sample", list(SAMPLES.keys()))
-    path, ground_truth = SAMPLES[choice]
-    pil_img = Image.open(path)
+        selected_image = Image.open(uploaded_file)
+        selected_name = uploaded_file.name
 
-if pil_img is not None:
-    st.image(pil_img, caption="Selected mammogram", width=350)
-    run = st.button("Analyse")
 
-    if run:
-        with st.spinner("Analysing mammogram..."):
-            arr, display_img = preprocess_image(pil_img)
-            prob = float(model.predict(arr, verbose=0)[0][0])
-            label = "Malignant" if prob >= THRESHOLD else "Benign"
-            heatmap = make_gradcam(arr, model, THRESHOLD)
-            overlay = make_overlay(display_img, heatmap)
+# ---------------- analysis ----------------
 
-        col1, col2, col3 = st.columns(3)
-        col1.image(pil_img, caption="Original", use_container_width=True)
-        col2.image(display_img, caption="CLAHE Enhanced", use_container_width=True)
-        col3.image(overlay, caption="Grad-CAM Overlay", use_container_width=True)
+if selected_image is not None:
+    st.divider()
+    st.subheader("Selected mammogram")
+    st.image(selected_image, caption=selected_name, width=350)
 
+    if st.button("Analyse Mammogram", type="primary"):
+        with st.spinner("Running inference and generating Grad-CAM..."):
+            label, prob, display_img, overlay = run_prediction(selected_image, model)
+
+        # result
         st.subheader("Prediction")
         if label == "Malignant":
             st.error(f"Model prediction: **{label}**")
         else:
             st.success(f"Model prediction: **{label}**")
 
-        if ground_truth is not None:
-            st.write(f"Ground truth for this sample: **{ground_truth}**")
-            if ground_truth != label:
-                st.caption("Doesn't match the model's prediction - a good example of where it still gets it wrong.")
-
         metric1, metric2 = st.columns(2)
-        metric1.metric("Malignant probability", f"{prob:.1%}")
-        metric2.metric("Decision threshold", f"{THRESHOLD:.4f}")
+        with metric1:
+            st.metric("Malignant probability", f"{prob:.1%}")
+        with metric2:
+            st.metric("Decision threshold", f"{THRESHOLD:.4f}")
+
+        # only sample images come with a known label to compare against
+        if ground_truth is not None:
+            st.write(f"**Known ground truth:** {ground_truth}")
+            if label == ground_truth:
+                st.success("Prediction matches the known sample label.")
+            else:
+                st.warning(
+                    "Prediction does not match the known sample label. "
+                    "This example demonstrates a model error."
+                )
+
+        # visualisations
+        st.subheader("Visual explanation")
+        col1, col2, col3 = st.columns(3)
+        with col1:
+            st.image(selected_image, caption="Original Mammogram", use_container_width=True)
+        with col2:
+            st.image(display_img, caption="CLAHE-Enhanced Input", use_container_width=True)
+        with col3:
+            st.image(overlay, caption="Grad-CAM Overlay", use_container_width=True)
 
         st.info(
-            "Grad-CAM highlights image regions that contributed more strongly to "
-            "the model's classification decision. It should not be interpreted "
-            "as tumour segmentation or an exact lesion boundary."
+            "Grad-CAM highlights image regions that contributed more "
+            "strongly to the model's classification decision. "
+            "It should not be interpreted as tumour segmentation "
+            "or an exact lesion boundary."
         )
 
 st.divider()
