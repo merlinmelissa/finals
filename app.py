@@ -59,11 +59,11 @@ SAMPLES = {
         "ground_truth": "Malignant"
     },
     "Sample 7": {
-        "path": "samples/malignant_22.jpg",
+        "path": "samples/malignant_31.jpg",
         "ground_truth": "Malignant"
     },
     "Sample 8": {
-        "path": "samples/malignant_23.jpg",
+        "path": "samples/malignant_32.jpg",
         "ground_truth": "Malignant"
     },
     "Sample 9": {
@@ -75,7 +75,7 @@ SAMPLES = {
         "ground_truth": "Malignant"
     },
     "Sample 11": {
-        "path": "samples/malignant_26.jpg",
+        "path": "samples/malignant_33.jpg",
         "ground_truth": "Malignant"
     },
     "Sample 12": {
@@ -83,11 +83,11 @@ SAMPLES = {
         "ground_truth": "Malignant"
     },
     "Sample 13": {
-        "path": "samples/malignant_28.jpg",
+        "path": "samples/malignant_34.jpg",
         "ground_truth": "Malignant"
     },
     "Sample 14": {
-        "path": "samples/malignant_29.jpg",
+        "path": "samples/malignant_35.jpg",
         "ground_truth": "Malignant"
     },
     "Sample 15": {
